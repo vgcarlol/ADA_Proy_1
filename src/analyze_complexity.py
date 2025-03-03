@@ -64,4 +64,3 @@ if __name__ == "__main__":
     n_values = [2, 3, 4, 5, 6, 7, 8]
     times = measure_execution_times(n_values, repetitions=10)  # Más repeticiones para precisión
     plot_execution_times(n_values, times)
-    
