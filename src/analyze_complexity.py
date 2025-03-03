@@ -25,9 +25,11 @@ def measure_execution_times(n_values, repetitions=5):
             exec_times = []
             for _ in range(repetitions):  # Repetimos varias veces para mayor precisión
                 start_time = time.perf_counter()
-                run_fibonacci()
+                run_fibonacci(n, verbose=False)  # FORZAR `verbose=False` para evitar ruido
                 end_time = time.perf_counter()
                 exec_times.append(end_time - start_time)
+
+                time.sleep(0.01)  # Pequeña pausa para evitar interferencias en el sistema
 
             avg_time = sum(exec_times) / repetitions  # Promedio de tiempos
             times.append(avg_time)
