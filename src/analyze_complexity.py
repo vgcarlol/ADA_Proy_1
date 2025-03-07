@@ -1,66 +1,99 @@
-import time
-import os
-import matplotlib.pyplot as plt
-import numpy as np
 import csv
-from fibonacci_turing import run_fibonacci
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
 
-RESULTS_DIR = "results"
-CSV_FILE = os.path.join(RESULTS_DIR, "execution_times.csv")
-PLOT_FILE = os.path.join(RESULTS_DIR, "execution_plot.png")
+def compute_best_polynomial(x, y, max_power=5):
+    best_r2 = -np.inf
+    optimal_poly = None
+    best_power = 0
+    for degree in range(1, max_power + 1):
+        coefficients = np.polyfit(x, y, degree)
+        poly_func = np.poly1d(coefficients)
+        predictions = poly_func(x)
+        current_r2 = r2_score(y, predictions)
+        if current_r2 > best_r2:
+            best_r2 = current_r2
+            optimal_poly = poly_func
+            best_power = degree
+    return optimal_poly, best_power
 
-def ensure_results_dir():
-    if not os.path.exists(RESULTS_DIR):
-        os.makedirs(RESULTS_DIR)
-
-def measure_execution_times(n_values, repetitions=5):
-    ensure_results_dir()
-    times = []
-
-    with open(CSV_FILE, mode="w", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(["n", "execution_time"])
-
-        for n in n_values:
-            exec_times = []
-            for _ in range(repetitions):  # Repetimos varias veces para mayor precisión
-                start_time = time.perf_counter()
-                run_fibonacci(n, verbose=False)  # FORZAR `verbose=False` para evitar ruido
-                end_time = time.perf_counter()
-                exec_times.append(end_time - start_time)
-
-                time.sleep(0.01)  # Pequeña pausa para evitar interferencias en el sistema
-
-            avg_time = sum(exec_times) / repetitions  # Promedio de tiempos
-            times.append(avg_time)
-            writer.writerow([n, avg_time])
-
-    print(f"Resultados guardados en {CSV_FILE}")
-    return times
-
-def plot_execution_times(n_values, times):
-    plt.figure(figsize=(8, 5))
-    plt.plot(n_values, times, marker='o', linestyle='-', label="Datos reales")
-
-    # Ajuste de regresión polinomial (grado 3 en vez de 2)
-    coef = np.polyfit(n_values, times, 3)  # Ahora usamos grado 3
-    poly_eq = np.poly1d(coef)
-    fitted_values = poly_eq(n_values)
-
-    equation_str = f"{coef[0]:.6f}x³ + {coef[1]:.6f}x² + {coef[2]:.6f}x + {coef[3]:.6f}"
-    plt.plot(n_values, fitted_values, linestyle="--", label=f"Ajuste: {equation_str}")
-
-    plt.xlabel("Tamaño de n (Fibonacci)")
-    plt.ylabel("Tiempo de ejecución (s)")
-    plt.title("Tiempo de ejecución de la Máquina de Turing")
-    plt.legend()
-    plt.grid()
-
-    plt.savefig(PLOT_FILE)
-    print(f"Gráfica guardada en {PLOT_FILE}")
+def perform_analysis(csv_filename="fibonacci_results.csv"):
+    entradas = []
+    tiempos = []
+    salidas = []
+    
+    with open(csv_filename, "r") as file:
+        lector = csv.reader(file)
+        next(lector)  # Saltar encabezado
+        for row in lector:
+            # Orden: Cadena Entrada, Entrada Decimal, Tiempo (s), Salida Unaria, Salida Decimal
+            entradas.append(float(row[1]))
+            tiempos.append(float(row[2]))
+            salidas.append(float(row[4]))
+    
+    entradas = np.array(entradas)
+    tiempos = np.array(tiempos)
+    salidas = np.array(salidas)
+    
+    # Ajustes polinómicos
+    poly_time_vs_output, deg_time_output = compute_best_polynomial(salidas, tiempos)
+    poly_time_vs_input, deg_time_input = compute_best_polynomial(entradas, tiempos)
+    poly_output_vs_input, deg_output_input = compute_best_polynomial(entradas, salidas)
+    
+    x_fit_output = np.linspace(min(salidas), max(salidas), 100)
+    y_fit_time_output = poly_time_vs_output(x_fit_output)
+    
+    x_fit_input = np.linspace(min(entradas), max(entradas), 100)
+    y_fit_time_input = poly_time_vs_input(x_fit_input)
+    y_fit_output_input = poly_output_vs_input(x_fit_input)
+    
+    # Crear una figura con 2 filas y 2 columnas de subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+    
+    # Subplot 1: Salida Decimal vs Tiempo
+    axs[0,0].scatter(salidas, tiempos, color='blue', label="Datos")
+    axs[0,0].plot(x_fit_output, y_fit_time_output, color='red', label=f"Ajuste (grado {deg_time_output})")
+    axs[0,0].set_title("Salida Decimal vs Tiempo")
+    axs[0,0].set_xlabel("Salida Decimal")
+    axs[0,0].set_ylabel("Tiempo (s)")
+    axs[0,0].grid(True)
+    axs[0,0].legend()
+    
+    # Subplot 2: Entrada Decimal vs Tiempo
+    axs[0,1].scatter(entradas, tiempos, color='blue', label="Datos")
+    axs[0,1].plot(x_fit_input, y_fit_time_input, color='red', label=f"Ajuste (grado {deg_time_input})")
+    axs[0,1].set_title("Entrada Decimal vs Tiempo")
+    axs[0,1].set_xlabel("Entrada Decimal")
+    axs[0,1].set_ylabel("Tiempo (s)")
+    axs[0,1].grid(True)
+    axs[0,1].legend()
+    
+    # Subplot 3: Entrada Decimal vs Salida Decimal
+    axs[1,0].scatter(entradas, salidas, color='green', label="Datos")
+    axs[1,0].plot(x_fit_input, y_fit_output_input, color='red', label=f"Ajuste (grado {deg_output_input})")
+    axs[1,0].set_title("Entrada Decimal vs Salida Decimal")
+    axs[1,0].set_xlabel("Entrada Decimal")
+    axs[1,0].set_ylabel("Salida Decimal")
+    axs[1,0].grid(True)
+    axs[1,0].legend()
+    
+    # Subplot 4: Entrada vs Salida en Escala Logarítmica
+    axs[1,1].scatter(entradas, salidas, color='purple', label="Datos")
+    axs[1,1].plot(x_fit_input, y_fit_output_input, color='red', label=f"Ajuste (grado {deg_output_input})")
+    axs[1,1].set_yscale("log")
+    axs[1,1].set_title("Entrada vs Salida (Escala Log)")
+    axs[1,1].set_xlabel("Entrada Decimal")
+    axs[1,1].set_ylabel("Salida Decimal (log)")
+    axs[1,1].grid(True)
+    axs[1,1].legend()
+    
+    plt.tight_layout()
     plt.show()
+    
+    print(f"Ajuste Salida-Tiempo: Grado {deg_time_output}, Función: {poly_time_vs_output}")
+    print(f"Ajuste Entrada-Tiempo: Grado {deg_time_input}, Función: {poly_time_vs_input}")
+    print(f"Ajuste Entrada-Salida: Grado {deg_output_input}, Función: {poly_output_vs_input}")
 
 if __name__ == "__main__":
-    n_values = [2, 3, 4, 5, 6, 7, 8]
-    times = measure_execution_times(n_values, repetitions=10)  # Más repeticiones para precisión
-    plot_execution_times(n_values, times)
+    perform_analysis()

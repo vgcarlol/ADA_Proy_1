@@ -1,26 +1,59 @@
-from turing_machine import TuringMachine
-import json
+import time
+import csv
+from turing_machine import ConfigReader, TuringMachine
 
-def run_fibonacci(n, verbose=True):
-    # Cargar la configuración existente
-    with open("configs/fibonacci_config.json", "r") as f:
-        config = json.load(f)
+def procesar_cadena(cadena, maquina):
+    """Procesa una cadena de entrada y retorna un diccionario con los resultados."""
+    # Convertir la entrada a valor decimal (si la cadena es "Z", se interpreta como 0)
+    valor_entrada = 0 if cadena == "Z" else len(cadena)
+    
+    maquina.load_tape(cadena)
+    inicio = time.perf_counter()
+    maquina.run_machine()
+    fin = time.perf_counter()
+    
+    tiempo_ejecucion = fin - inicio
+    # Obtener la salida ignorando los espacios en blanco (marcados como "B")
+    salida = "".join(c for c in maquina.tape if c != "B")
+    valor_salida = 0 if salida == "Z" else len(salida)
+    
+    return {
+        "cadena": cadena,
+        "entrada": valor_entrada,
+        "tiempo": tiempo_ejecucion,
+        "salida": salida,
+        "salida_decimal": valor_salida
+    }
 
-    # Modificar la cinta inicial para reflejar el valor de n
-    config["initial_tape"] = "1" * n + "_1"
-
-    # Guardar la configuración actualizada temporalmente
-    temp_config_path = "configs/temp_fibonacci_config.json"
-    with open(temp_config_path, "w") as f:
-        json.dump(config, f)
-
-    # Ejecutar la máquina de Turing con la configuración modificada
-    tm = TuringMachine(temp_config_path)
-    result = tm.run(verbose=verbose)  # Silenciar salida si se está midiendo tiempos
-
-    if verbose:
-        print(f"Resultado en la cinta para n={n}: {result}")
-    return result
+def simular_fibonacci(config_path="configs/fibonacci.yml", output_csv="fibonacci_results.csv"):
+    # Cargar la configuración y crear la máquina
+    config = ConfigReader(config_path)
+    maquina = TuringMachine(
+        config.states,
+        config.start_state,
+        config.end_state,
+        config.input_symbols,
+        config.tape_symbols,
+        config.transitions
+    )
+    
+    resultados = []
+    for cad in config.sim_inputs:
+        print(f"\nProcesando cadena: {cad}")
+        datos = procesar_cadena(cad, maquina)
+        print(f"Equivalente decimal: {datos['entrada']}")
+        print(f"Salida unaria: {datos['salida']}")
+        print(f"Salida decimal: {datos['salida_decimal']}")
+        print(f"Tiempo transcurrido: {datos['tiempo']:.6f} s")
+        resultados.append(datos)
+    
+    # Escribir resultados en un CSV
+    with open(output_csv, 'w', newline='') as f:
+        campos = ["cadena", "entrada", "tiempo", "salida", "salida_decimal"]
+        escritor = csv.DictWriter(f, fieldnames=campos)
+        escritor.writeheader()
+        for res in resultados:
+            escritor.writerow(res)
 
 if __name__ == "__main__":
-    run_fibonacci(5)  # Ejemplo con n=5
+    simular_fibonacci()
