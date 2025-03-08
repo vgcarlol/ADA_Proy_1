@@ -1,66 +1,96 @@
-import json
+import yaml
+
+class ConfigReader:
+    def __init__(self, config_path):
+        self.config_path = config_path
+        self.data = {}
+        self.load_config()
+        self.extract_parameters()
+        
+    def load_config(self):
+        with open(self.config_path, 'r') as file:
+            self.data = yaml.safe_load(file)
+    
+    def extract_parameters(self):
+        # Usamos la estructura de tu YAML
+        q_states = self.data.get("q_states", {})
+        self.states = q_states.get("q_list", [])
+        self.start_state = q_states.get("initial", "")
+        self.end_state = q_states.get("final", "")
+        self.input_symbols = self.data.get("alphabet", [])
+        self.tape_symbols = self.data.get("tape_alphabet", [])
+        self.sim_inputs = self.data.get("simulation_strings", [])
+        transitions_list = self.data.get("delta", [])
+        
+        self.transitions = {}
+        for trans in transitions_list:
+            key = (trans["params"]["initial_state"], trans["params"]["tape_input"])
+            value = (
+                trans["output"]["final_state"],
+                trans["output"]["tape_output"],
+                trans["output"]["tape_displacement"]
+            )
+            self.transitions[key] = value
 
 class TuringMachine:
-    def __init__(self, config_path):
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+    def __init__(self, states, start_state, end_state, input_symbols, tape_symbols, transitions):
+        self.states = states
+        self.start_state = start_state
+        self.end_state = end_state
+        self.input_symbols = input_symbols
+        self.tape_symbols = tape_symbols
+        self.transitions = transitions
+        self.reset_machine()
 
-        self.original_tape = list(config["initial_tape"])  # Guardar cinta original
-        self.tape = self.original_tape[:]
-        self.head = config["initial_head_position"]
-        self.state = config["start_state"]
-        self.accept_state = config["accept_state"]
-        self.transitions = {tuple(k.split(',')): v for k, v in config["transitions"].items()}
-
-    def reset(self):
-        self.tape = self.original_tape[:]
-        self.head = 0
-        self.state = "q0"
-
-    def step(self):
-        symbol = self.tape[self.head]
-
-        if (self.state, symbol) in self.transitions:
-            new_symbol, move, new_state = self.transitions[(self.state, symbol)]
-            self.tape[self.head] = new_symbol
-
-            # Imprimir información del paso
-            print(f"Paso: Estado={self.state}, Símbolo={symbol}, Nueva cinta={''.join(self.tape)}, Cabeza={self.head}, Nuevo estado={new_state}")
-
-            # Mover la cabeza de lectura
-            if move == 'R':
-                self.head += 1
-                if self.head >= len(self.tape):  # Expande la cinta si es necesario
-                    self.tape.append('_')
-            elif move == 'L':
-                self.head -= 1
-                if self.head < 0:
-                    self.tape.insert(0, '_')
-                    self.head = 0
-
-            self.state = new_state
-        else:
-            return False  # No hay transición, se detiene
+    def reset_machine(self):
+        self.tape = []
+        self.head_index = 0
+        self.current_state = self.start_state
+        self.error = ""
+    
+    def load_tape(self, word):
+        self.tape = list(word)
+        self.current_state = self.start_state
+        self.head_index = 0
+        self.error = ""
+    
+    def single_step(self):
+        if self.head_index < 0:
+            self.tape.insert(0, "B")
+            self.head_index = 0
+        if self.head_index >= len(self.tape):
+            self.tape.append("B")
+        
+        current_symbol = self.tape[self.head_index]
+        if (self.current_state, current_symbol) not in self.transitions:
+            self.error = "Transición no definida para el estado y símbolo actual."
+            return False
+        
+        next_state, write_symbol, move_direction = self.transitions[(self.current_state, current_symbol)]
+        self.tape[self.head_index] = write_symbol
+        if move_direction == "R":
+            self.head_index += 1
+        elif move_direction == "L":
+            self.head_index -= 1
+            if self.head_index < 0:
+                self.tape.insert(0, "B")
+                self.head_index = 0
+        self.current_state = next_state
         return True
+    
+    def run_machine(self):
+        while True:
+            if self.current_state == self.end_state:
+                # Imprimir la cinta final (sin espacios en blanco "B")
+                final_word = "".join(ch for ch in self.tape if ch != "B")
+                print(f"Cinta transformada final: {final_word}")
+                return True
+            if not self.single_step():
+                return False
 
-    def run(self, verbose=True):
-        step_count = 0  # Contador de pasos
-
-        while self.state != self.accept_state:
-            if verbose:
-                print(f"Paso {step_count}: Estado={self.state}, Cabeza={self.head}, Cinta={''.join(self.tape)}")
-            if not self.step():
-                break
-            step_count += 1
-
-            # Evitar bucles infinitos
-            if step_count > 100:
-                print("Se ha alcanzado el límite de pasos sin llegar al estado de aceptación.")
-                break
-
-        return ''.join(self.tape).strip('_')
-
-if __name__ == "__main__":
-    tm = TuringMachine("../configs/fibonacci_config.json")
-    result = tm.run(verbose=True)
-    print("\nResultado final en la cinta:", result)
+    def display_tape(self):
+        tape_str = ''.join(self.tape)
+        if 0 <= self.head_index < len(self.tape):
+            return tape_str[:self.head_index] + "[" + tape_str[self.head_index] + "]" + tape_str[self.head_index+1:]
+        else:
+            return "[B]"

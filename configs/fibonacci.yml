@@ -1,0 +1,170 @@
+q_states:
+  q_list:
+    - "q0"   # Estado inicial
+    - "q1"   # Estado para procesar entrada
+    - "q2"   # Estado auxiliar 
+    - "q3"   # Estado auxiliar
+    - "q4"   # Estado de movimiento
+    - "q5"   # Estado auxiliar
+    - "q6"   # Estado auxiliar
+    - "q7"   # Estado de procesamiento
+    - "q8"   # Estado de procesamiento
+    - "q9"   # Estado de procesamiento
+    - "q10"  # Estado de procesamiento
+    - "q11"  # Estado de procesamiento
+    - "q12"  # Estado central de procesamiento
+    - "q13"  # Estado de procesamiento
+    - "q14"  # Estado de procesamiento
+    - "q15"  # Estado de procesamiento
+    - "q16"  # Estado de procesamiento
+    - "q17"  # Estado de procesamiento
+  initial: "q0"
+  final: "q_accept"
+alphabet:
+  - "1"    # Representación unaria para entrada
+tape_alphabet:
+  - "1"    # Unos para entrada/salida
+  - "0"    # Marca 0
+  - "A"    # Marca A para procesamiento
+  - "B"    # Marca B para procesamiento
+  - "X"    # Marca X para procesamiento
+  - "Y"    # Marca Y para procesamiento
+  - "Z"    # Marca Z para procesamiento
+  - "C"    # Marca C para procesamiento
+  - "D"    # Marca D para procesamiento
+  - "E"    # Marca E para procesamiento
+delta:
+  # Estado q0: Inicio
+  - params: { initial_state: "q0", tape_input: "1" }
+    output: { final_state: "q1", tape_output: "B", tape_displacement: R }
+  - params: { initial_state: "q0", tape_input: "B" }
+    output: { final_state: "q_accept", tape_output: "0", tape_displacement: R }
+      
+  # Estado q1: Procesamiento inicial
+  - params: { initial_state: "q1", tape_input: "1" }
+    output: { final_state: "q2", tape_output: "B", tape_displacement: R }
+  - params: { initial_state: "q1", tape_input: "B" }
+    output: { final_state: "q_accept", tape_output: "1", tape_displacement: R }
+  
+  # Estado q2: Marcado y retroceso
+  - params: { initial_state: "q2", tape_input: "1" }
+    output: { final_state: "q2", tape_output: "1", tape_displacement: R }
+  - params: { initial_state: "q2", tape_input: "B" }
+    output: { final_state: "q3", tape_output: "0", tape_displacement: R }
+      
+  # Estado q3: Preparación
+  - params: { initial_state: "q3", tape_input: "B" }
+    output: { final_state: "q4", tape_output: "A", tape_displacement: R }
+  
+  # Estado q4: Movimiento y preparación
+  - params: { initial_state: "q4", tape_input: "B" }
+    output: { final_state: "q5", tape_output: "0", tape_displacement: R }
+  
+  # Estado q5: Preparación
+  - params: { initial_state: "q5", tape_input: "B" }
+    output: { final_state: "q12", tape_output: "A", tape_displacement: L }
+  
+  # Estado q7: Procesamiento
+  - params: { initial_state: "q7", tape_input: "0" }
+    output: { final_state: "q7", tape_output: "0", tape_displacement: R }
+  - params: { initial_state: "q7", tape_input: "A" }
+    output: { final_state: "q7", tape_output: "A", tape_displacement: R }
+  - params: { initial_state: "q7", tape_input: "1" }
+    output: { final_state: "q7", tape_output: "A", tape_displacement: R }
+  - params: { initial_state: "q7", tape_input: "B" }
+    output: { final_state: "q8", tape_output: "0", tape_displacement: L }
+  
+  # Estado q8: Procesamiento y marcado
+  - params: { initial_state: "q8", tape_input: "1" }
+    output: { final_state: "q8", tape_output: "1", tape_displacement: L }
+  - params: { initial_state: "q8", tape_input: "0" }
+    output: { final_state: "q9", tape_output: "0", tape_displacement: L }
+  - params: { initial_state: "q8", tape_input: "A" }
+    output: { final_state: "q10", tape_output: "1", tape_displacement: R }
+  
+  # Estado q9: Procesamiento
+  - params: { initial_state: "q9", tape_input: "1" }
+    output: { final_state: "q9", tape_output: "1", tape_displacement: L }
+  - params: { initial_state: "q9", tape_input: "0" }
+    output: { final_state: "q12", tape_output: "0", tape_displacement: L }
+  - params: { initial_state: "q9", tape_input: "A" }
+    output: { final_state: "q10", tape_output: "1", tape_displacement: R }
+  
+  # Estado q10: Procesamiento
+  - params: { initial_state: "q10", tape_input: "0" }
+    output: { final_state: "q10", tape_output: "0", tape_displacement: R }
+  - params: { initial_state: "q10", tape_input: "1" }
+    output: { final_state: "q10", tape_output: "1", tape_displacement: R }
+  - params: { initial_state: "q10", tape_input: "B" }
+    output: { final_state: "q11", tape_output: "1", tape_displacement: L }
+  
+  # Estado q11: Retroceso y marcado
+  - params: { initial_state: "q11", tape_input: "1" }
+    output: { final_state: "q11", tape_output: "1", tape_displacement: L }
+  - params: { initial_state: "q11", tape_input: "0" }
+    output: { final_state: "q8", tape_output: "0", tape_displacement: L }
+  
+  # Estado q12: Estado central - procesamiento principal
+  - params: { initial_state: "q12", tape_input: "0" }
+    output: { final_state: "q12", tape_output: "0", tape_displacement: L }
+  - params: { initial_state: "q12", tape_input: "1" }
+    output: { final_state: "q12", tape_output: "1", tape_displacement: L }
+  - params: { initial_state: "q12", tape_input: "A" }
+    output: { final_state: "q12", tape_output: "A", tape_displacement: L }
+  - params: { initial_state: "q12", tape_input: "B" }
+    output: { final_state: "q13", tape_output: "B", tape_displacement: R }
+  
+  # Estado q13: Procesamiento y marcado
+  - params: { initial_state: "q13", tape_input: "0" }
+    output: { final_state: "q15", tape_output: "1", tape_displacement: R }
+  - params: { initial_state: "q13", tape_input: "1" }
+    output: { final_state: "q14", tape_output: "B", tape_displacement: R }
+  
+  # Estado q14: Procesamiento
+  - params: { initial_state: "q14", tape_input: "0" }
+    output: { final_state: "q7", tape_output: "0", tape_displacement: R }
+  - params: { initial_state: "q14", tape_input: "1" }
+    output: { final_state: "q14", tape_output: "1", tape_displacement: R }
+  
+  # Estado q15: Procesamiento
+  - params: { initial_state: "q15", tape_input: "1" }
+    output: { final_state: "q15", tape_output: "A", tape_displacement: R }
+  - params: { initial_state: "q15", tape_input: "0" }
+    output: { final_state: "q15", tape_output: "0", tape_displacement: R }
+  - params: { initial_state: "q15", tape_input: "A" }
+    output: { final_state: "q15", tape_output: "A", tape_displacement: R }
+  - params: { initial_state: "q15", tape_input: "B" }
+    output: { final_state: "q16", tape_output: "B", tape_displacement: L }
+  
+  # Estado q16: Procesamiento y marcado
+  - params: { initial_state: "q16", tape_input: "A" }
+    output: { final_state: "q16", tape_output: "1", tape_displacement: L }
+  - params: { initial_state: "q16", tape_input: "0" }
+    output: { final_state: "q17", tape_output: "B", tape_displacement: L }
+  
+  # Estado q17: Procesamiento final
+  - params: { initial_state: "q17", tape_input: "0" }
+    output: { final_state: "q17", tape_output: "B", tape_displacement: L }
+  - params: { initial_state: "q17", tape_input: "A" }
+    output: { final_state: "q17", tape_output: "B", tape_displacement: L }
+  - params: { initial_state: "q17", tape_input: "1" }
+    output: { final_state: "q_accept", tape_output: "B", tape_displacement: R }
+
+simulation_strings:
+  - "111111"         # Fibonacci(6) = 8
+  - "1111111"        # Fibonacci(7) = 13
+  - "11111111"       # Fibonacci(8) = 21
+  - "111111111"      # Fibonacci(9) = 34
+  - "1111111111"     # Fibonacci(10) = 55
+  - "11111111111"    # Fibonacci(11) = 89
+  - "111111111111"   # Fibonacci(12) = 144
+  - "1111111111111"  # Fibonacci(13) = 233
+  - "11111111111111" # Fibonacci(14) = 377
+  - "111111111111111"      # Fibonacci(15) = 610
+  - "1111111111111111"     # Fibonacci(16) = 987
+  - "11111111111111111"    # Fibonacci(17) = 1597
+  - "111111111111111111"   # Fibonacci(18) = 2584
+  - "1111111111111111111"  # Fibonacci(19) = 4181
+  - "11111111111111111111" # Fibonacci(20) = 6765
+  - "111111111111111111111" # Fibonacci(21) = 10946
+  - "1111111111111111111111" # Fibonacci(22) = 17711
